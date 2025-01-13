@@ -57,13 +57,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
         feeFromContract.toNumber() !== fee ||
         feeWithCollectionOwnerFromContract.toNumber() !== feeWithCollectionOwner
     ) {
-        await execute(
-            contractName,
-            { from: deployer, log: true },
-            'setFee',
-            fee,
-            feeWithCollectionOwner,
-        );
+        await execute(contractName, { from: deployer, log: true }, 'setFee', fee, feeWithCollectionOwner);
     }
 
     const areBidsActive = await read(contractName, 'areBidsActive');
