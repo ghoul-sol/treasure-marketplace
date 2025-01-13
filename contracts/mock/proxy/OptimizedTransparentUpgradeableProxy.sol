@@ -31,11 +31,10 @@ contract OptimizedTransparentUpgradeableProxy is UpgradeableProxy {
      * @dev Initializes an upgradeable proxy managed by `_admin`, backed by the implementation at `_logic`, and
      * optionally initialized with `_data` as explained in {UpgradeableProxy-constructor}.
      */
-    constructor(
-        address initialLogic,
-        address initialAdmin,
-        bytes memory _data
-    ) payable UpgradeableProxy(initialLogic, _data) {
+    constructor(address initialLogic, address initialAdmin, bytes memory _data)
+        payable
+        UpgradeableProxy(initialLogic, _data)
+    {
         assert(_ADMIN_SLOT == bytes32(uint256(keccak256("eip1967.proxy.admin")) - 1));
         bytes32 slot = _ADMIN_SLOT;
 
@@ -111,7 +110,7 @@ contract OptimizedTransparentUpgradeableProxy is UpgradeableProxy {
     function upgradeToAndCall(address newImplementation, bytes calldata data) external payable ifAdmin {
         _upgradeTo(newImplementation);
         // solhint-disable-next-line avoid-low-level-calls
-        (bool success, ) = newImplementation.delegatecall(data);
+        (bool success,) = newImplementation.delegatecall(data);
         require(success);
     }
 

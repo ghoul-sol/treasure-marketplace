@@ -10,7 +10,6 @@ import "./TransparentUpgradeableProxy.sol";
  * explanation of why you would want to use this see the documentation for {TransparentUpgradeableProxy}.
  */
 contract ProxyAdmin is Ownable {
-
     constructor(address owner) Ownable(owner) {}
 
     /**
@@ -73,7 +72,11 @@ contract ProxyAdmin is Ownable {
      *
      * - This contract must be the admin of `proxy`.
      */
-    function upgradeAndCall(TransparentUpgradeableProxy proxy, address implementation, bytes memory data) public payable onlyOwner {
+    function upgradeAndCall(TransparentUpgradeableProxy proxy, address implementation, bytes memory data)
+        public
+        payable
+        onlyOwner
+    {
         proxy.upgradeToAndCall{value: msg.value}(implementation, data);
     }
 }

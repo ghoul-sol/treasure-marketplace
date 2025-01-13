@@ -30,7 +30,10 @@ contract TransparentUpgradeableProxy is UpgradeableProxy {
      * @dev Initializes an upgradeable proxy managed by `_admin`, backed by the implementation at `_logic`, and
      * optionally initialized with `_data` as explained in {UpgradeableProxy-constructor}.
      */
-    constructor(address initialLogic, address initialAdmin, bytes memory _data) payable UpgradeableProxy(initialLogic, _data) {
+    constructor(address initialLogic, address initialAdmin, bytes memory _data)
+        payable
+        UpgradeableProxy(initialLogic, _data)
+    {
         assert(_ADMIN_SLOT == bytes32(uint256(keccak256("eip1967.proxy.admin")) - 1));
         _setAdmin(initialAdmin);
     }
@@ -148,7 +151,7 @@ contract TransparentUpgradeableProxy is UpgradeableProxy {
     /**
      * @dev Makes sure the admin cannot access the fallback function. See {Proxy-_beforeFallback}.
      */
-    function _beforeFallback() internal override virtual {
+    function _beforeFallback() internal virtual override {
         require(msg.sender != _admin(), "TransparentUpgradeableProxy: admin cannot fallback to proxy target");
         super._beforeFallback();
     }

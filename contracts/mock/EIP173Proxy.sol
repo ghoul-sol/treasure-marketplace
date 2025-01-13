@@ -15,11 +15,7 @@ contract EIP173Proxy is Proxy {
 
     // /////////////////////// CONSTRUCTOR //////////////////////////////////////////////////////////////////////
 
-    constructor(
-        address implementationAddress,
-        address ownerAddress,
-        bytes memory data
-    ) payable {
+    constructor(address implementationAddress, address ownerAddress, bytes memory data) payable {
         _setImplementation(implementationAddress, data);
         _setOwner(ownerAddress);
     }
