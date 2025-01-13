@@ -83,9 +83,9 @@ describe('TreasureMarketplace', () => {
 
     describe('init', () => {
         it('initialize()', async () => {
-            await expect(marketplace.initialize(100, feeRecipient, await magicToken.getAddress())).to.be.revertedWith(
-                'Initializable: contract is already initialized',
-            );
+            await expect(
+                marketplace.initialize(100, feeRecipient, await magicToken.getAddress()),
+            ).to.be.revertedWithCustomError(marketplace, 'InvalidInitialization');
         });
 
         it('setFee()', async () => {
@@ -93,11 +93,12 @@ describe('TreasureMarketplace', () => {
             const newFee = 1500;
             const newFeeWithCollectionOwner = 750;
 
-            await expect(
-                marketplace.connect(staker3Signer).setFee(newFee, newFeeWithCollectionOwner),
-            ).to.be.revertedWith(
-                'AccessControl: account 0x90f79bf6eb2c4f870365e785982e1f101e93b906 is missing role 0x34d5e892b0a7ec1561fc4a5fdcb31b798cf623590906b938d356c9619e539958',
-            );
+            await expect(marketplace.connect(staker3Signer).setFee(newFee, newFeeWithCollectionOwner))
+                .to.be.revertedWithCustomError(marketplace, 'AccessControlUnauthorizedAccount')
+                .withArgs(
+                    '0x90F79bf6EB2c4f870365E785982E1f101E93b906',
+                    '0x34d5e892b0a7ec1561fc4a5fdcb31b798cf623590906b938d356c9619e539958',
+                );
 
             const tooHighFee = (await marketplace.MAX_FEE()) + 1n;
 
@@ -114,9 +115,12 @@ describe('TreasureMarketplace', () => {
             expect(await marketplace.feeReceipient()).to.be.equal(feeRecipient);
             const newRecipient = seller;
 
-            await expect(marketplace.connect(staker3Signer).setFeeRecipient(newRecipient)).to.be.revertedWith(
-                'AccessControl: account 0x90f79bf6eb2c4f870365e785982e1f101e93b906 is missing role 0x34d5e892b0a7ec1561fc4a5fdcb31b798cf623590906b938d356c9619e539958',
-            );
+            await expect(marketplace.connect(staker3Signer).setFeeRecipient(newRecipient))
+                .to.be.revertedWithCustomError(marketplace, 'AccessControlUnauthorizedAccount')
+                .withArgs(
+                    '0x90F79bf6EB2c4f870365E785982E1f101E93b906',
+                    '0x34d5e892b0a7ec1561fc4a5fdcb31b798cf623590906b938d356c9619e539958',
+                );
             await expect(marketplace.setFeeRecipient(ethers.ZeroAddress)).to.be.revertedWith(
                 'TreasureMarketplace: cannot set 0x0 address',
             );
@@ -143,9 +147,12 @@ describe('TreasureMarketplace', () => {
 
             await expect(
                 marketplace.connect(staker3Signer).setCollectionOwnerFee(await nft.getAddress(), collectionOwnerFee),
-            ).to.be.revertedWith(
-                'AccessControl: account 0x90f79bf6eb2c4f870365e785982e1f101e93b906 is missing role 0x34d5e892b0a7ec1561fc4a5fdcb31b798cf623590906b938d356c9619e539958',
-            );
+            )
+                .to.be.revertedWithCustomError(marketplace, 'AccessControlUnauthorizedAccount')
+                .withArgs(
+                    '0x90F79bf6EB2c4f870365E785982E1f101E93b906',
+                    '0x34d5e892b0a7ec1561fc4a5fdcb31b798cf623590906b938d356c9619e539958',
+                );
 
             await (await marketplace.setCollectionOwnerFee(await nft.getAddress(), collectionOwnerFee)).wait();
 
@@ -158,9 +165,12 @@ describe('TreasureMarketplace', () => {
         it('setPriceTracker()', async () => {
             const salesTrackerAddress = staker3;
 
-            await expect(marketplace.connect(staker3Signer).setPriceTracker(salesTrackerAddress)).to.be.revertedWith(
-                'AccessControl: account 0x90f79bf6eb2c4f870365e785982e1f101e93b906 is missing role 0x34d5e892b0a7ec1561fc4a5fdcb31b798cf623590906b938d356c9619e539958',
-            );
+            await expect(marketplace.connect(staker3Signer).setPriceTracker(salesTrackerAddress))
+                .to.be.revertedWithCustomError(marketplace, 'AccessControlUnauthorizedAccount')
+                .withArgs(
+                    '0x90F79bf6EB2c4f870365E785982E1f101E93b906',
+                    '0x34d5e892b0a7ec1561fc4a5fdcb31b798cf623590906b938d356c9619e539958',
+                );
 
             await expect(marketplace.setPriceTracker(salesTrackerAddress))
                 .to.emit(marketplace, 'UpdateSalesTracker')
@@ -393,7 +403,7 @@ describe('TreasureMarketplace', () => {
             await marketplace.pause();
             await expect(
                 marketplace.connect(sellerSigner).createOrUpdateListings([ListingsToCreate.VALID_1]),
-            ).to.be.revertedWith('Pausable: paused');
+            ).to.be.revertedWithCustomError(marketplace, 'EnforcedPause');
             await marketplace.unpause();
             await expect(
                 marketplace
@@ -425,7 +435,7 @@ describe('TreasureMarketplace', () => {
             await marketplace.pause();
             await expect(
                 marketplace.connect(sellerSigner).createOrUpdateListings([ListingsToUpdate.INCREASE_PRICE]),
-            ).to.be.revertedWith('Pausable: paused');
+            ).to.be.revertedWithCustomError(marketplace, 'EnforcedPause');
 
             await marketplace.unpause();
             // Can increase price
@@ -560,7 +570,7 @@ describe('TreasureMarketplace', () => {
                             expirationTime,
                             await magicToken.getAddress(),
                         ),
-                ).to.be.revertedWith('Pausable: paused');
+                ).to.be.revertedWithCustomError(marketplace, 'EnforcedPause');
 
                 await marketplace.unpause();
 
@@ -650,7 +660,7 @@ describe('TreasureMarketplace', () => {
                                 newExpirationTime,
                                 await magicToken.getAddress(),
                             ),
-                    ).to.be.revertedWith('Pausable: paused');
+                    ).to.be.revertedWithCustomError(marketplace, 'EnforcedPause');
 
                     await marketplace.unpause();
 
@@ -808,7 +818,7 @@ describe('TreasureMarketplace', () => {
                                     false,
                                 ],
                             ]),
-                    ).to.be.revertedWith('Pausable: paused');
+                    ).to.be.revertedWithCustomError(marketplace, 'EnforcedPause');
 
                     await marketplace.unpause();
 
@@ -1112,7 +1122,7 @@ describe('TreasureMarketplace', () => {
             await marketplace.pause();
             await expect(
                 marketplace.connect(sellerSigner).createOrUpdateListings([ListingsToCreate.VALID_1]),
-            ).to.be.revertedWith('Pausable: paused');
+            ).to.be.revertedWithCustomError(marketplace, 'EnforcedPause');
             await marketplace.unpause();
             await expect(
                 marketplace
@@ -1144,7 +1154,7 @@ describe('TreasureMarketplace', () => {
             await marketplace.pause();
             await expect(
                 marketplace.connect(sellerSigner).createOrUpdateListings([ListingsToUpdate.INCREASE_PRICE]),
-            ).to.be.revertedWith('Pausable: paused');
+            ).to.be.revertedWithCustomError(marketplace, 'EnforcedPause');
 
             await marketplace.unpause();
             // Can increase price
@@ -2091,7 +2101,9 @@ describe('TreasureMarketplace', () => {
                     pricePerItem,
                     await magicToken.getAddress(),
                 ]),
-        ).to.be.revertedWith('ERC721: operator query for nonexistent token');
+        )
+            .to.be.revertedWithCustomError(nft, 'ERC721NonexistentToken')
+            .withArgs(0);
 
         await (await nft.connect(sellerSigner).setApprovalForAll(await marketplace.getAddress(), true)).wait();
 

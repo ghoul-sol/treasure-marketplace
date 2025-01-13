@@ -61,7 +61,7 @@ describe('TreasureNFTPriceTracker', () => {
                 legionNFTContractAddress,
                 await genCommonMetadataContract.getAddress(),
             ),
-        ).to.be.revertedWith('Initializable: contract is already initialized');
+        ).to.be.revertedWithCustomError(nftPriceTracker, 'InvalidInitialization');
 
         expect(await nftPriceTracker.treasureMarketplaceContract()).to.equal(await marketplaceSigner.getAddress());
         expect(await nftPriceTracker.legionContract()).to.equal(legionNFTContractAddress);
