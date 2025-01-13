@@ -6,10 +6,12 @@
     "scripts": {
         "build": "tsc",
         "lint": "eslint hardhat.config.ts hardhat-extra/ deploy/ test/",
+        "check": "npx prettier --check hardhat.config.ts hardhat-extra/ deploy/ test/",
         "style": "npx prettier -w hardhat.config.ts hardhat-extra/ deploy/ test/ && npm run lint",
         "deploy:zksync-sepolia": "hardhat deploy-zksync --network zkSyncSepolia --script zkSyncSepolia/TreasureMarketplaceTestnet.deploy.ts",
         "deploy:treasure-topaz": "hardhat deploy-zksync --network treasureTopaz --script treasureTopaz/TreasureMarketplaceTestnet.deploy.ts",
         "deploy:treasure-mainnet": "hardhat deploy-zksync --network treasureMainnet --script treasureMainnet/TreasureMarketplace.deploy.ts",
+        "hardhat:test": "hardhat test",
         "test": "hardhat coverage --testfiles 'contracts/TreasureMarketplace.sol'"
     },
     "repository": {
