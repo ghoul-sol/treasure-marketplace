@@ -1,57 +1,66 @@
-# Treasure Marketplace
+## Foundry
 
--   Selling NFTs for a fixed price by owner
--   Supports only listings with expiration date, no offers
--   Stores price history on-chain
--   Takes fee on sale @ 5%
--   Supports ERC721 and ERC1155
+**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
 
-## Build and test
+Foundry consists of:
 
-Use Node version 20 or higher.
+-   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
+-   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
+-   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
+-   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
 
-```sh
-pnpm install
-pnpm test # This performs tests and checks test coverage
+## Documentation
+
+https://book.getfoundry.sh/
+
+## Usage
+
+### Build
+
+```shell
+$ forge build
 ```
 
-## Deployment on Treasure Chains
+### Test
 
-```
-pnpm hardhat deploy --network treasureMainnet --deploy-scripts deploy/treasureMainnet --tags treasure-marketplace
-```
-
-## Deployment
-
-Check settings for `fee`, `feeRecipient`, `newOwner`, `newProxyOwner` and `nftApprovedList` in `TreasureMarketplace.deploy.ts`.
-
-Run
-
-```
-npx hardhat deploy --network <network>
+```shell
+$ forge test
 ```
 
-Confirm on-chain values in deployed contracts for `fee`, `feeRecipient`, `newOwner`, `newProxyOwner` and `nftApprovedList`.
+### Format
 
-Make sure that ownership of deployment wallet has been renounced.
+```shell
+$ forge fmt
+```
 
-## Verifications for ZkSync
+### Gas Snapshots
 
-Verification for ZkSync is done by OZ hardhat-upgrades plugin, see the [docs](https://docs.openzeppelin.com/upgrades-plugins/1.x/api-hardhat-upgrades#verify).
+```shell
+$ forge snapshot
+```
 
-## Contributing
+### Anvil
 
-Style guide
+```shell
+$ anvil
+```
 
--   120 hard limit line length
--   Function parameters start with an underscore (\_)
--   NatSpec
-    -   Align whitespace for tags
-    -   Align whitespace for `@param`s
-    -   `@param` (and state variable `@dev`) are sentence case without capitalization for the first letter
-    -   Events
-        -   `@notice` sentence case without a period like "XXX was update"
-    -   Functions
-        -   `@notice` sentence case without a period like "Finishes a sale"
-        -   `@dev` sentence case with a period at end
--   Follow [Solidity Style Guide](https://docs.soliditylang.org/en/v0.8.12/style-guide.html?highlight=style) where it makes sense
+### Deploy
+
+```shell
+$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
+```
+
+### Cast
+
+```shell
+$ cast <subcommand>
+```
+
+### Help
+
+```shell
+$ forge --help
+$ anvil --help
+$ cast --help
+```
