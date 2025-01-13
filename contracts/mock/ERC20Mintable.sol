@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.12;
+pragma solidity ^0.8.28;
 
-import '@openzeppelin/contracts/token/ERC20/ERC20.sol';
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract ERC20Mintable is ERC20("MAGIC", "MAGIC") {
     function mint(address _to, uint256 _amount) public {

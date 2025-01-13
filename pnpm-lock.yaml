@@ -30,11 +30,11 @@ importers:
         specifier: ^2.0.4
         version: 2.0.10(hardhat@2.22.10(ts-node@10.9.2(@swc/core@1.7.23)(@types/node@22.5.4)(typescript@5.5.4))(typescript@5.5.4))
       '@openzeppelin/contracts':
-        specifier: 4.3.2
-        version: 4.3.2
+        specifier: 5.2.0
+        version: 5.2.0
       '@openzeppelin/contracts-upgradeable':
-        specifier: 4.5.2
-        version: 4.5.2
+        specifier: 5.2.0
+        version: 5.2.0(@openzeppelin/contracts@5.2.0)
       '@prb/math':
         specifier: ^2.5.0
         version: 2.5.0(@ethersproject/bignumber@5.7.0)(evm-bn@1.1.2(@ethersproject/bignumber@5.7.0))(mathjs@10.6.4)
@@ -666,20 +666,19 @@ packages:
   '@nomiclabs/hardhat-docker@2.0.2':
     resolution: {integrity: sha512-XgGEpRT3wlA1VslyB57zyAHV+oll8KnV1TjwnxxC1tpAL04/lbdwpdO5KxInVN8irMSepqFpsiSkqlcnvbE7Ng==}
 
-  '@openzeppelin/contracts-upgradeable@4.5.2':
-    resolution: {integrity: sha512-xgWZYaPlrEOQo3cBj97Ufiuv79SPd8Brh4GcFYhPgb6WvAq4ppz8dWKL6h+jLAK01rUqMRp/TS9AdXgAeNvCLA==}
-
   '@openzeppelin/contracts-upgradeable@4.9.6':
     resolution: {integrity: sha512-m4iHazOsOCv1DgM7eD7GupTJ+NFVujRZt1wzddDPSVGpWdKq1SKkla5htKG7+IS4d2XOCtzkUNwRZ7Vq5aEUMA==}
 
-  '@openzeppelin/contracts@4.3.2':
-    resolution: {integrity: sha512-AybF1cesONZStg5kWf6ao9OlqTZuPqddvprc0ky7lrUVOjXeKpmQ2Y9FK+6ygxasb+4aic4O5pneFBfwVsRRRg==}
+  '@openzeppelin/contracts-upgradeable@5.2.0':
+    resolution: {integrity: sha512-mZIu9oa4tQTlGiOJHk6D3LdJlqFqF6oNOSn6S6UVJtzfs9UsY9/dhMEbAVTwElxUtJnjpf6yA062+oBp+eOyPg==}
+    peerDependencies:
+      '@openzeppelin/contracts': 5.2.0
 
   '@openzeppelin/contracts@4.9.6':
     resolution: {integrity: sha512-xSmezSupL+y9VkHZJGDoCBpmnB2ogM13ccaYDWqJTfS3dbuHkgjuwDFUmaFauBCboQMGB/S5UqUl2y54X99BmA==}
 
-  '@openzeppelin/contracts@5.1.0':
-    resolution: {integrity: sha512-p1ULhl7BXzjjbha5aqst+QMLY+4/LCWADXOCsmLHRM77AqiPjnd9vvUN9sosUfhL9JGKpZ0TjEGxgvnizmWGSA==}
+  '@openzeppelin/contracts@5.2.0':
+    resolution: {integrity: sha512-bxjNie5z89W1Ea0NZLZluFh8PrFNn9DH8DQlujEok2yjsOlraUPKID5p1Wk3qdNbf6XkQ1Os2RvfiHrrXLHWKA==}
 
   '@openzeppelin/defender-sdk-base-client@1.14.4':
     resolution: {integrity: sha512-tOePVQLKpqfGQ1GMzHvSBNd2psPYd86LDNpvdl5gjD0Y2kW/zNh5qBXy29RraGtk/qc8zs9hzS5pAOh0vhGkGQ==}
@@ -4571,7 +4570,7 @@ snapshots:
       '@matterlabs/hardhat-zksync-deploy': 1.6.0(ethers@6.13.2)(hardhat@2.22.10(ts-node@10.9.2(@swc/core@1.7.23)(@types/node@22.5.4)(typescript@5.5.4))(typescript@5.5.4))(zksync-ethers@6.15.3(ethers@6.13.2))
       '@matterlabs/hardhat-zksync-ethers': 1.2.1(ethers@6.13.2)(ts-node@10.9.2(@swc/core@1.7.23)(@types/node@22.5.4)(typescript@5.5.4))(typescript@5.5.4)(zksync-ethers@6.15.3(ethers@6.13.2))
       '@matterlabs/hardhat-zksync-solc': 1.2.5(hardhat@2.22.10(ts-node@10.9.2(@swc/core@1.7.23)(@types/node@22.5.4)(typescript@5.5.4))(typescript@5.5.4))
-      '@openzeppelin/contracts-hardhat-zksync-upgradable': '@openzeppelin/contracts@5.1.0'
+      '@openzeppelin/contracts-hardhat-zksync-upgradable': '@openzeppelin/contracts@5.2.0'
       '@openzeppelin/defender-sdk-base-client': 1.14.4
       '@openzeppelin/defender-sdk-deploy-client': 1.14.4(debug@4.3.7)
       '@openzeppelin/defender-sdk-network-client': 1.15.2(debug@4.3.7)
@@ -4847,15 +4846,15 @@ snapshots:
       - encoding
       - supports-color
 
-  '@openzeppelin/contracts-upgradeable@4.5.2': {}
-
   '@openzeppelin/contracts-upgradeable@4.9.6': {}
 
-  '@openzeppelin/contracts@4.3.2': {}
+  '@openzeppelin/contracts-upgradeable@5.2.0(@openzeppelin/contracts@5.2.0)':
+    dependencies:
+      '@openzeppelin/contracts': 5.2.0
 
   '@openzeppelin/contracts@4.9.6': {}
 
-  '@openzeppelin/contracts@5.1.0': {}
+  '@openzeppelin/contracts@5.2.0': {}
 
   '@openzeppelin/defender-sdk-base-client@1.14.4':
     dependencies:

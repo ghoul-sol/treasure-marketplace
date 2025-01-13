@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.12;
+pragma solidity ^0.8.28;
 
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {PRBMathUD60x18} from "@prb/math/contracts/PRBMathUD60x18.sol";
@@ -21,18 +21,14 @@ contract TreasureNFTPriceTracker is ITreasureNFTPriceTracker, OwnableUpgradeable
     ///         performed before publishing this contract address.
     /// @param  _treasureMarketplaceContract address of treasure marketplace
     /// @param  _legionContract address of the legion collection
-    function initialize(
-        address _treasureMarketplaceContract,
-        address _legionContract,
-        address _legionMetadata
-    )
+    function initialize(address _treasureMarketplaceContract, address _legionContract, address _legionMetadata)
         external
         initializer
     {
         require(address(_treasureMarketplaceContract) != address(0), "TreasureNFTPricing: cannot set address(0)");
         require(address(_legionContract) != address(0), "TreasureNFTPricing: cannot set address(0)");
 
-        __Ownable_init();
+        __Ownable_init(msg.sender);
 
         treasureMarketplaceContract = _treasureMarketplaceContract;
         legionContract = _legionContract;
@@ -45,46 +41,36 @@ contract TreasureNFTPriceTracker is ITreasureNFTPriceTracker, OwnableUpgradeable
     /// @param _collection Address of the collection that had a token sale
     /// @param _tokenId The token sold
     /// @param _salePrice The amount the sale was for
-    function recordSale(
-        address _collection,
-        uint256 _tokenId,
-        uint256 _salePrice
-    ) external {
+    function recordSale(address _collection, uint256 _tokenId, uint256 _salePrice) external {
         require(msg.sender == treasureMarketplaceContract, "Invalid caller");
-        if(_collection != legionContract) {
+        if (_collection != legionContract) {
             return;
         }
-        (LegionGeneration gen,LegionRarity rarity) = ILegionMetadataStore(legionMetadata).genAndRarityForLegion(_tokenId);
-        if(gen != LegionGeneration.GENESIS) {
+        (LegionGeneration gen, LegionRarity rarity) =
+            ILegionMetadataStore(legionMetadata).genAndRarityForLegion(_tokenId);
+        if (gen != LegionGeneration.GENESIS) {
             return;
         }
         FloorType floorType;
-        if(rarity == LegionRarity.COMMON) {
+        if (rarity == LegionRarity.COMMON) {
             floorType = FloorType.SUBFLOOR1;
-        } else if(rarity == LegionRarity.UNCOMMON) {
+        } else if (rarity == LegionRarity.UNCOMMON) {
             floorType = FloorType.SUBFLOOR2;
-        } else if(rarity == LegionRarity.RARE) {
+        } else if (rarity == LegionRarity.RARE) {
             floorType = FloorType.SUBFLOOR3;
-        }
-        else {
+        } else {
             return;
         }
         uint256 oldAverage = collectionToFloorTypeToPriceAvg[legionContract][floorType];
         uint256 newAverage;
-        if(oldAverage == 0) {
+        if (oldAverage == 0) {
             newAverage = _salePrice;
         } else {
             newAverage = PRBMathUD60x18.avg(oldAverage, _salePrice);
         }
         collectionToFloorTypeToPriceAvg[legionContract][floorType] = newAverage;
 
-        emit AveragePriceUpdated(
-            legionContract,
-            floorType,
-            oldAverage,
-            _salePrice,
-            newAverage
-        );
+        emit AveragePriceUpdated(legionContract, floorType, oldAverage, _salePrice, newAverage);
     }
 
     /// @notice Return the current floor average for a given collection
