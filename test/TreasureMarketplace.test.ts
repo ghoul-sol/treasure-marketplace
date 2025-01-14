@@ -1493,7 +1493,7 @@ describe('TreasureMarketplace', () => {
                     ).to.be.revertedWith('TreasureMarketplace: below min price');
 
                     // Can increase price
-                    marketplace
+                    await marketplace
                         .connect(sellerSigner)
                         .updateListing(
                             await erc1155.getAddress(),
