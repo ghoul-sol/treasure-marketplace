@@ -3,18 +3,40 @@ pragma solidity ^0.8.28;
 
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {PRBMathUD60x18} from "@prb/math/contracts/PRBMathUD60x18.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {AccessControlEnumerableUpgradeable} from
+    "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
 
 import {ITreasureNFTPriceTracker, FloorType} from "./interfaces/ITreasureNFTPriceTracker.sol";
 import {ILegionMetadataStore, LegionGeneration, LegionRarity} from "./interfaces/ILegionMetadataStore.sol";
 
-contract TreasureNFTPriceTracker is ITreasureNFTPriceTracker, OwnableUpgradeable {
+/// @title  Treasure NFT Price Tracker
+/// @notice This contract tracks and calculates average floor prices for NFT collections.
+///         This contract uses the UUPS upgrade pattern. Only accounts with PRICE_TRACKER_ADMIN_ROLE can upgrade
+///         the implementation.
+/// @dev    Implements UUPS upgradeability and role-based access control
+contract TreasureNFTPriceTracker is
+    Initializable,
+    UUPSUpgradeable,
+    AccessControlEnumerableUpgradeable,
+    ITreasureNFTPriceTracker
+{
     using PRBMathUD60x18 for uint256;
+
+    /// @notice Role that can upgrade the implementation and manage the contract
+    bytes32 public constant PRICE_TRACKER_ADMIN_ROLE = keccak256("PRICE_TRACKER_ADMIN_ROLE");
 
     address public treasureMarketplaceContract;
     address public legionContract;
     address public legionMetadata;
 
     mapping(address => mapping(FloorType => uint256)) internal collectionToFloorTypeToPriceAvg;
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
 
     /// @notice Perform initial contract setup
     /// @dev    The initializer modifier ensures this is only called once, the owner should confirm this was properly
@@ -28,7 +50,11 @@ contract TreasureNFTPriceTracker is ITreasureNFTPriceTracker, OwnableUpgradeable
         require(address(_treasureMarketplaceContract) != address(0), "TreasureNFTPricing: cannot set address(0)");
         require(address(_legionContract) != address(0), "TreasureNFTPricing: cannot set address(0)");
 
-        __Ownable_init(msg.sender);
+        __UUPSUpgradeable_init();
+        __AccessControl_init();
+
+        _setRoleAdmin(PRICE_TRACKER_ADMIN_ROLE, PRICE_TRACKER_ADMIN_ROLE);
+        _grantRole(PRICE_TRACKER_ADMIN_ROLE, msg.sender);
 
         treasureMarketplaceContract = _treasureMarketplaceContract;
         legionContract = _legionContract;
@@ -81,4 +107,8 @@ contract TreasureNFTPriceTracker is ITreasureNFTPriceTracker, OwnableUpgradeable
     function getAveragePriceForCollection(address _collection, FloorType _floorType) external view returns (uint256) {
         return collectionToFloorTypeToPriceAvg[_collection][_floorType];
     }
+
+    /// @dev    This function is called by the proxy contract when a new implementation is set.
+    /// @param  newImplementation address of the new implementation
+    function _authorizeUpgrade(address newImplementation) internal override onlyRole(PRICE_TRACKER_ADMIN_ROLE) {}
 }

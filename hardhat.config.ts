@@ -1,12 +1,12 @@
 import 'dotenv/config';
 import '@nomicfoundation/hardhat-chai-matchers';
 import '@nomicfoundation/hardhat-ethers';
-import '@nomicfoundation/hardhat-verify';
 import 'hardhat-contract-sizer';
 import 'hardhat-deploy';
 import 'hardhat-gas-reporter';
 import 'solidity-coverage';
 import '@matterlabs/hardhat-zksync';
+import '@matterlabs/hardhat-zksync-verify';
 import { HardhatUserConfig } from 'hardhat/config';
 import './hardhat-extra';
 
@@ -34,71 +34,6 @@ const config: HardhatUserConfig = {
         localhost: {
             url: 'http://localhost:8545',
             chainId: 61337,
-            zksync: false,
-        },
-        mainnet: {
-            url: `${process.env.ETHEREUM_MAINNET_URL}`,
-            kmsKeyId: prodKmsKey,
-            chainId: 1,
-            live: true,
-            saveDeployments: true,
-            gasMultiplier: 2,
-            deploy: ['deploy/mainnet'],
-            zksync: false,
-        },
-        sepolia: {
-            url: `${process.env.SEPOLIA_URL}`,
-            kmsKeyId: devKmsKey,
-            chainId: 11155111,
-            live: false,
-            saveDeployments: true,
-            gasMultiplier: 2,
-            deploy: ['deploy/sepolia'],
-            zksync: false,
-        },
-        arbitrum: {
-            url: `${process.env.ARBITRUM_MAINNET_URL}`,
-            kmsKeyId: prodKmsKey,
-            chainId: 42161,
-            live: true,
-            saveDeployments: true,
-            gasMultiplier: 2,
-            deploy: ['deploy/arbitrum'],
-            zksync: false,
-        },
-        arbitrumNova: {
-            url: `${process.env.ARBITRUM_NOVA_URL}`,
-            kmsKeyId: prodKmsKey,
-            chainId: 42170,
-            live: true,
-            saveDeployments: true,
-            gasMultiplier: 2,
-            deploy: ['deploy/arbitrumNova'],
-            zksync: false,
-        },
-        arbitrumSepolia: {
-            url: `${process.env.ARBITRUM_SEPOLIA_URL}`,
-            kmsKeyId: devKmsKey,
-            chainId: 421614,
-            live: false,
-            saveDeployments: true,
-            gasMultiplier: 2,
-            deploy: ['deploy/arbitrumSepolia'],
-            zksync: false,
-        },
-        ruby: {
-            url: `${process.env.RUBY_URL}`,
-            kmsKeyId: devKmsKey,
-            chainId: 0xeeee1,
-            live: false,
-            saveDeployments: true,
-            gasMultiplier: 2,
-            deploy: ['deploy/ruby'],
-            verify: {
-                etherscan: {
-                    apiUrl: 'https://ruby.explorer.caldera.xyz/api?module=contract&action=verify',
-                },
-            },
             zksync: false,
         },
         eraTestNode: {
