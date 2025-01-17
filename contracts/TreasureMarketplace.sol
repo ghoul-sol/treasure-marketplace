@@ -11,7 +11,6 @@ import {AccessControlEnumerableUpgradeable} from
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {ITreasureNFTPriceTracker} from "./interfaces/ITreasureNFTPriceTracker.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {ITreasureMarketplace} from "./interfaces/ITreasureMarketplace.sol";
@@ -424,12 +423,6 @@ contract TreasureMarketplace is
             false
         );
 
-        if (priceTrackerAddress != address(0)) {
-            ITreasureNFTPriceTracker(priceTrackerAddress).recordSale(
-                _acceptBidParams.nftAddress, _acceptBidParams.tokenId, _bid.pricePerItem
-            );
-        }
-
         // Announce accepting bid
         emit BidAccepted(
             _msgSender(),
@@ -531,12 +524,6 @@ contract TreasureMarketplace is
         } else {
             listings[_buyItemParams.nftAddress][_buyItemParams.tokenId][_buyItemParams.owner].quantity -=
                 _buyItemParams.quantity;
-        }
-
-        if (priceTrackerAddress != address(0)) {
-            ITreasureNFTPriceTracker(priceTrackerAddress).recordSale(
-                _buyItemParams.nftAddress, _buyItemParams.tokenId, listedItem.pricePerItem
-            );
         }
 
         if (_buyItemParams.usingMagic) {
