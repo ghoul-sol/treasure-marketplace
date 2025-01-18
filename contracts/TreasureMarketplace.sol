@@ -56,7 +56,7 @@ contract TreasureMarketplace is
     IERC20 public paymentToken;
     IERC20 public wMagic;
     uint256 public fee;
-    address public feeReceipient;
+    address public feeRecipient;
     address public priceTrackerAddress;
     uint256 public feeWithCollectionOwner;
     bool public areBidsActive;
@@ -567,7 +567,7 @@ contract TreasureMarketplace is
         uint256 _protocolFeeAmount = _totalPrice * _protocolFee / BASIS_POINTS;
         uint256 _collectionFeeAmount = _totalPrice * _collectionFee / BASIS_POINTS;
 
-        _transferAmount(_from, feeReceipient, _protocolFeeAmount, _paymentToken, _usingMagic);
+        _transferAmount(_from, feeRecipient, _protocolFeeAmount, _paymentToken, _usingMagic);
         _transferAmount(_from, _collectionFeeRecipient, _collectionFeeAmount, _paymentToken, _usingMagic);
 
         // Transfer rest to seller
@@ -645,7 +645,7 @@ contract TreasureMarketplace is
     /// @param  _newFeeRecipient the wallet to receive fees
     function setFeeRecipient(address _newFeeRecipient) public onlyRole(TREASURE_MARKETPLACE_ADMIN_ROLE) {
         require(_newFeeRecipient != address(0), "TreasureMarketplace: cannot set 0x0 address");
-        feeReceipient = _newFeeRecipient;
+        feeRecipient = _newFeeRecipient;
         emit UpdateFeeRecipient(_newFeeRecipient);
     }
 

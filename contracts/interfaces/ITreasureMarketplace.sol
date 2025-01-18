@@ -189,7 +189,7 @@ interface ITreasureMarketplace {
     function fee() external view returns (uint256);
 
     /// @notice address that receives fees
-    function feeReceipient() external view returns (address);
+    function feeRecipient() external view returns (address);
 
     /// @notice mapping for listings: nftAddress => tokenId => offeror => ListingOrBid
     function listings(address nftAddress, uint256 tokenId, address offeror)
@@ -265,6 +265,11 @@ interface ITreasureMarketplace {
     /// @notice Create or update multiple listings
     function createOrUpdateListings(CreateOrUpdateListingParams[] calldata _params) external;
 
+    /// @notice Remove an item listing
+    /// @param  _nftAddress which token contract holds the offered token
+    /// @param  _tokenId    the identifier for the offered token
+    function cancelListing(address _nftAddress, uint256 _tokenId) external;
+
     /// @notice Buy multiple listed items
     function buyItems(BuyItemParams[] calldata _buyItemParams) external payable;
 
@@ -300,4 +305,39 @@ interface ITreasureMarketplace {
 
     /// @notice Unpauses the marketplace
     function unpause() external;
+
+    /// @notice Gets the payment token for a collection
+    /// @param  collection The collection address
+    /// @return The payment token address for the collection, or the default payment token if none is set
+    function getPaymentTokenForCollection(address collection) external view returns (address);
+
+    /// @notice Creates or updates a bid for a specific token
+    /// @param  _nftAddress The address of the NFT contract
+    /// @param  _tokenId The token ID to bid on
+    /// @param  _quantity The quantity of tokens to bid for
+    /// @param  _pricePerItem The price per item offered
+    /// @param  _expirationTime When the bid expires
+    /// @param  _paymentToken The token to be used for payment
+    function createOrUpdateTokenBid(
+        address _nftAddress,
+        uint256 _tokenId,
+        uint64 _quantity,
+        uint128 _pricePerItem,
+        uint64 _expirationTime,
+        address _paymentToken
+    ) external;
+
+    /// @notice Creates or updates a bid for an entire collection
+    /// @param  _nftAddress The address of the NFT contract
+    /// @param  _quantity The quantity of tokens to bid for
+    /// @param  _pricePerItem The price per item offered
+    /// @param  _expirationTime When the bid expires
+    /// @param  _paymentToken The token to be used for payment
+    function createOrUpdateCollectionBid(
+        address _nftAddress,
+        uint64 _quantity,
+        uint128 _pricePerItem,
+        uint64 _expirationTime,
+        address _paymentToken
+    ) external;
 }
