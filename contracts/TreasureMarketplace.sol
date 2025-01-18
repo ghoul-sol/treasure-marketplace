@@ -11,17 +11,25 @@ import {AccessControlEnumerableUpgradeable} from
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {ITreasureNFTPriceTracker} from "./interfaces/ITreasureNFTPriceTracker.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {ITreasureMarketplace} from "./interfaces/ITreasureMarketplace.sol";
 
 /// @title  Treasure NFT marketplace
 /// @notice This contract allows you to buy and sell NFTs from token contracts that are approved by the contract owner.
-///         Please note that this contract is upgradeable. In the event of a compromised ProxyAdmin contract owner,
-///         collectable tokens and payments may be at risk. To prevent this, the ProxyAdmin is owned by a multi-sig
-///         governed by the TreasureDAO council.
+///         This contract uses the UUPS upgrade pattern. Only accounts with TREASURE_MARKETPLACE_ADMIN_ROLE can upgrade
+///         the implementation.
 /// @dev    This contract does not store any tokens at any time, it's only collects details "the sale" and approvals
 ///         from both parties and preforms non-custodial transaction by transfering NFT from owner to buying and payment
 ///         token from buying to NFT owner.
-contract TreasureMarketplace is AccessControlEnumerableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
+contract TreasureMarketplace is
+    Initializable,
+    UUPSUpgradeable,
+    AccessControlEnumerableUpgradeable,
+    PausableUpgradeable,
+    ReentrancyGuardUpgradeable,
+    ITreasureMarketplace
+{
     using SafeERC20 for IERC20;
 
     struct ListingOrBid {
@@ -35,214 +43,55 @@ contract TreasureMarketplace is AccessControlEnumerableUpgradeable, PausableUpgr
         address paymentTokenAddress;
     }
 
-    struct CollectionOwnerFee {
-        /// @dev the fee, out of 10,000, that this collection owner will be given for each sale
-        uint32 fee;
-        /// @dev the recipient of the collection specific fee
-        address recipient;
-    }
-
-    enum TokenApprovalStatus {
-        NOT_APPROVED,
-        ERC_721_APPROVED,
-        ERC_1155_APPROVED
-    }
-
-    /// @notice TREASURE_MARKETPLACE_ADMIN_ROLE role hash
     bytes32 public constant TREASURE_MARKETPLACE_ADMIN_ROLE = keccak256("TREASURE_MARKETPLACE_ADMIN_ROLE");
+    uint256 public constant BASIS_POINTS = 10000;
+    uint256 public constant MAX_FEE = 1500;
+    uint256 public constant MAX_COLLECTION_FEE = 2000;
+    uint256 public constant MIN_PRICE = 1e9;
 
     /// @notice ERC165 interface signatures
     bytes4 private constant INTERFACE_ID_ERC721 = 0x80ac58cd;
     bytes4 private constant INTERFACE_ID_ERC1155 = 0xd9b67a26;
 
-    /// @notice the denominator for portion calculation, i.e. how many basis points are in 100%
-    uint256 public constant BASIS_POINTS = 10000;
-
-    /// @notice the maximum fee which the owner may set (in units of basis points)
-    uint256 public constant MAX_FEE = 1500;
-
-    /// @notice the maximum fee which the collection owner may set
-    uint256 public constant MAX_COLLECTION_FEE = 2000;
-
-    /// @notice the minimum price for which any item can be sold
-    uint256 public constant MIN_PRICE = 1e9;
-
-    /// @notice the default token that is used for marketplace sales and fee payments. Can be overridden by collectionToTokenAddress.
     IERC20 public paymentToken;
-
-    /// @notice fee portion (in basis points) for each sale, (e.g. a value of 100 is 100/10000 = 1%). This is the fee if no collection owner fee is set.
+    IERC20 public wMagic;
     uint256 public fee;
-
-    /// @notice address that receives fees
-    address public feeReceipient;
-
-    /// @notice mapping for listings, maps: nftAddress => tokenId => offeror
-    mapping(address => mapping(uint256 => mapping(address => ListingOrBid))) public listings;
-
-    /// @notice NFTs which the owner has approved to be sold on the marketplace, maps: nftAddress => status
-    mapping(address => TokenApprovalStatus) public tokenApprovals;
-
-    /// @notice fee portion (in basis points) for each sale. This is used if a separate fee has been set for the collection owner.
+    address public feeRecipient;
+    address public priceTrackerAddress;
     uint256 public feeWithCollectionOwner;
-
-    /// @notice Maps the collection address to the fees which the collection owner collects. Some collections may not have a seperate fee, such as those owned by the Treasure DAO.
-    mapping(address => CollectionOwnerFee) public collectionToCollectionOwnerFee;
-
-    /// @notice Maps the collection address to the payment token that will be used for purchasing. If the address is the zero address, it will use the default paymentToken.
-    mapping(address => address) public collectionToPaymentToken;
-
-    /// @notice The address for weth.
-    IERC20 public weth;
-
-    /// @notice mapping for token bids (721/1155): nftAddress => tokneId => offeror
-    mapping(address => mapping(uint256 => mapping(address => ListingOrBid))) public tokenBids;
-
-    /// @notice mapping for collection level bids (721 only): nftAddress => offeror
-    mapping(address => mapping(address => ListingOrBid)) public collectionBids;
-
-    /// @notice Indicates if bid related functions are active.
     bool public areBidsActive;
 
-    /// @notice Address of the contract that tracks sales and prices of collections.
-    address public priceTrackerAddress;
-
-    /// @notice The fee portion was updated
-    /// @param  fee new fee amount (in units of basis points)
-    event UpdateFee(uint256 fee);
-
-    /// @notice The fee portion was updated for collections that have a collection owner.
-    /// @param  fee new fee amount (in units of basis points)
-    event UpdateFeeWithCollectionOwner(uint256 fee);
-
-    /// @notice A collection's fees have changed
-    /// @param  _collection  The collection
-    /// @param  _recipient   The recipient of the fees. If the address is 0, the collection fees for this collection have been removed.
-    /// @param  _fee         The fee amount (in units of basis points)
-    event UpdateCollectionOwnerFee(address _collection, address _recipient, uint256 _fee);
-
-    /// @notice The fee recipient was updated
-    /// @param  feeRecipient the new recipient to get fees
-    event UpdateFeeRecipient(address feeRecipient);
-
-    /// @notice The approval status for a token was updated
-    /// @param  nft    which token contract was updated
-    /// @param  status the new status
-    /// @param  paymentToken the token that will be used for payments for this collection
-    event TokenApprovalStatusUpdated(address nft, TokenApprovalStatus status, address paymentToken);
-
-    event TokenBidCreatedOrUpdated(
-        address bidder,
-        address nftAddress,
-        uint256 tokenId,
-        uint64 quantity,
-        uint128 pricePerItem,
-        uint64 expirationTime,
-        address paymentToken
-    );
-
-    event CollectionBidCreatedOrUpdated(
-        address bidder,
-        address nftAddress,
-        uint64 quantity,
-        uint128 pricePerItem,
-        uint64 expirationTime,
-        address paymentToken
-    );
-
-    event TokenBidCancelled(address bidder, address nftAddress, uint256 tokenId);
-
-    event CollectionBidCancelled(address bidder, address nftAddress);
-
-    event BidAccepted(
-        address seller,
-        address bidder,
-        address nftAddress,
-        uint256 tokenId,
-        uint64 quantity,
-        uint128 pricePerItem,
-        address paymentToken,
-        BidType bidType
-    );
-
-    /// @notice An item was listed for sale
-    /// @param  seller         the offeror of the item
-    /// @param  nftAddress     which token contract holds the offered token
-    /// @param  tokenId        the identifier for the offered token
-    /// @param  quantity       how many of this token identifier are offered (or 1 for a ERC-721 token)
-    /// @param  pricePerItem   the price (in units of the paymentToken) for each token offered
-    /// @param  expirationTime UNIX timestamp after when this listing expires
-    /// @param  paymentToken   the token used to list this item
-    event ItemListed(
-        address seller,
-        address nftAddress,
-        uint256 tokenId,
-        uint64 quantity,
-        uint128 pricePerItem,
-        uint64 expirationTime,
-        address paymentToken
-    );
-
-    /// @notice An item listing was updated
-    /// @param  seller         the offeror of the item
-    /// @param  nftAddress     which token contract holds the offered token
-    /// @param  tokenId        the identifier for the offered token
-    /// @param  quantity       how many of this token identifier are offered (or 1 for a ERC-721 token)
-    /// @param  pricePerItem   the price (in units of the paymentToken) for each token offered
-    /// @param  expirationTime UNIX timestamp after when this listing expires
-    /// @param  paymentToken   the token used to list this item
-    event ItemUpdated(
-        address seller,
-        address nftAddress,
-        uint256 tokenId,
-        uint64 quantity,
-        uint128 pricePerItem,
-        uint64 expirationTime,
-        address paymentToken
-    );
-
-    /// @notice An item is no longer listed for sale
-    /// @param  seller     former offeror of the item
-    /// @param  nftAddress which token contract holds the formerly offered token
-    /// @param  tokenId    the identifier for the formerly offered token
-    event ItemCanceled(address indexed seller, address indexed nftAddress, uint256 indexed tokenId);
-
-    /// @notice A listed item was sold
-    /// @param  seller       the offeror of the item
-    /// @param  buyer        the buyer of the item
-    /// @param  nftAddress   which token contract holds the sold token
-    /// @param  tokenId      the identifier for the sold token
-    /// @param  quantity     how many of this token identifier where sold (or 1 for a ERC-721 token)
-    /// @param  pricePerItem the price (in units of the paymentToken) for each token sold
-    /// @param  paymentToken the payment token that was used to pay for this item
-    event ItemSold(
-        address seller,
-        address buyer,
-        address nftAddress,
-        uint256 tokenId,
-        uint64 quantity,
-        uint128 pricePerItem,
-        address paymentToken
-    );
-
-    /// @notice The sales tracker contract was update
-    /// @param  _priceTrackerAddress the new address to call for sales price tracking
-    event UpdateSalesTracker(address _priceTrackerAddress);
+    mapping(address => mapping(uint256 => mapping(address => ListingOrBid))) public listings;
+    mapping(address => TokenApprovalStatus) public tokenApprovals;
+    mapping(address => CollectionOwnerFee) public collectionToCollectionOwnerFee;
+    mapping(address => address) public collectionToPaymentToken;
+    mapping(address => mapping(uint256 => mapping(address => ListingOrBid))) public tokenBids;
+    mapping(address => mapping(address => ListingOrBid)) public collectionBids;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() initializer {}
+    constructor() {
+        _disableInitializers();
+    }
 
     /// @notice Perform initial contract setup
     /// @dev    The initializer modifier ensures this is only called once, the owner should confirm this was properly
     ///         performed before publishing this contract address.
     /// @param  _initialFee          fee to be paid on each sale, in basis points
+    /// @param  _initialFeeWithCollectionOwner fee to be paid on each sale, in basis points
     /// @param  _initialFeeRecipient wallet to collets fees
-    /// @param  _initialPaymentToken address of the token that is used for settlement
-    function initialize(uint256 _initialFee, address _initialFeeRecipient, IERC20 _initialPaymentToken)
-        external
-        initializer
-    {
-        require(address(_initialPaymentToken) != address(0), "TreasureMarketplace: cannot set address(0)");
+    /// @param  _paymentToken address of the token that is used for settlement
+    /// @param  _wMagic       address of the wMagic token
+    function initialize(
+        uint256 _initialFee,
+        uint256 _initialFeeWithCollectionOwner,
+        address _initialFeeRecipient,
+        address _paymentToken,
+        address _wMagic
+    ) external initializer {
+        require(address(_paymentToken) != address(0), "TreasureMarketplace: cannot set address(0)");
+        require(address(_wMagic) != address(0), "TreasureMarketplace: cannot set address(0)");
 
+        __UUPSUpgradeable_init();
         __AccessControl_init_unchained();
         __Pausable_init_unchained();
         __ReentrancyGuard_init_unchained();
@@ -250,9 +99,10 @@ contract TreasureMarketplace is AccessControlEnumerableUpgradeable, PausableUpgr
         _setRoleAdmin(TREASURE_MARKETPLACE_ADMIN_ROLE, TREASURE_MARKETPLACE_ADMIN_ROLE);
         _grantRole(TREASURE_MARKETPLACE_ADMIN_ROLE, msg.sender);
 
-        setFee(_initialFee, _initialFee);
+        setFee(_initialFee, _initialFeeWithCollectionOwner);
         setFeeRecipient(_initialFeeRecipient);
-        paymentToken = _initialPaymentToken;
+        paymentToken = IERC20(_paymentToken);
+        wMagic = IERC20(_wMagic);
     }
 
     /// @notice Creates an item listing. You must authorize this marketplace with your item's token contract to list.
@@ -295,22 +145,6 @@ contract TreasureMarketplace is AccessControlEnumerableUpgradeable, PausableUpgr
         emit ItemUpdated(
             _msgSender(), _nftAddress, _tokenId, _newQuantity, _newPricePerItem, _newExpirationTime, _paymentToken
         );
-    }
-
-    struct CreateOrUpdateListingParams {
-        /// which token contract holds the offered token
-        address nftAddress;
-        /// the identifier for the token to be bought
-        uint256 tokenId;
-        /// how many of this token identifier to be bought (or 1 for a ERC-721 token)
-        uint64 quantity;
-        /// the maximum price (in units of the paymentToken) for each token offered
-        uint128 pricePerItem;
-        /// UNIX timestamp after when this listing expires
-        uint64 expirationTime;
-        /// indicates if the user is purchasing this item with eth.
-        /// the payment token to be used
-        address paymentToken;
     }
 
     /// @notice Create or update multiple listings.
@@ -589,12 +423,6 @@ contract TreasureMarketplace is AccessControlEnumerableUpgradeable, PausableUpgr
             false
         );
 
-        if (priceTrackerAddress != address(0)) {
-            ITreasureNFTPriceTracker(priceTrackerAddress).recordSale(
-                _acceptBidParams.nftAddress, _acceptBidParams.tokenId, _bid.pricePerItem
-            );
-        }
-
         // Announce accepting bid
         emit BidAccepted(
             _msgSender(),
@@ -611,17 +439,17 @@ contract TreasureMarketplace is AccessControlEnumerableUpgradeable, PausableUpgr
         _bid.quantity -= _acceptBidParams.quantity;
     }
 
-    /// @notice Buy multiple listed items. You must authorize this marketplace with your payment token to completed the buy or purchase with eth if it is a weth collection.
+    /// @notice Buy multiple listed items. You must authorize this marketplace with your payment token to completed the buy or purchase with magic if it is a wMagic collection.
     function buyItems(BuyItemParams[] calldata _buyItemParams) external payable nonReentrant whenNotPaused {
-        uint256 _ethAmountRequired;
+        uint256 _magicAmountRequired;
         for (uint256 i = 0; i < _buyItemParams.length; i++) {
-            _ethAmountRequired += _buyItem(_buyItemParams[i]);
+            _magicAmountRequired += _buyItem(_buyItemParams[i]);
         }
 
-        require(msg.value == _ethAmountRequired, "TreasureMarketplace: Bad ETH value");
+        require(msg.value == _magicAmountRequired, "TreasureMarketplace: Bad magic value");
     }
 
-    // Returns the amount of eth a user must have sent.
+    // Returns the amount of magic a user must have sent.
     function _buyItem(BuyItemParams calldata _buyItemParams) private returns (uint256) {
         // Validate buy order
         require(_msgSender() != _buyItemParams.owner, "TreasureMarketplace: Cannot buy your own item");
@@ -648,8 +476,11 @@ contract TreasureMarketplace is AccessControlEnumerableUpgradeable, PausableUpgr
             "TreasureMarketplace: Wrong payment token"
         );
 
-        if (_buyItemParams.usingEth) {
-            require(_paymentTokenForListing == address(weth), "TreasureMarketplace: ETH only used with weth collection");
+        if (_buyItemParams.usingMagic) {
+            require(
+                _paymentTokenForListing == address(wMagic),
+                "TreasureMarketplace: magic only used with wMagic collection"
+            );
         }
 
         // Transfer NFT to buyer, also validates owner owns it, and token is approved for trading
@@ -673,7 +504,7 @@ contract TreasureMarketplace is AccessControlEnumerableUpgradeable, PausableUpgr
             _msgSender(),
             _buyItemParams.owner,
             _buyItemParams.paymentToken,
-            _buyItemParams.usingEth
+            _buyItemParams.usingMagic
         );
 
         // Announce sale
@@ -695,13 +526,7 @@ contract TreasureMarketplace is AccessControlEnumerableUpgradeable, PausableUpgr
                 _buyItemParams.quantity;
         }
 
-        if (priceTrackerAddress != address(0)) {
-            ITreasureNFTPriceTracker(priceTrackerAddress).recordSale(
-                _buyItemParams.nftAddress, _buyItemParams.tokenId, listedItem.pricePerItem
-            );
-        }
-
-        if (_buyItemParams.usingEth) {
+        if (_buyItemParams.usingMagic) {
             return _buyItemParams.quantity * listedItem.pricePerItem;
         } else {
             return 0;
@@ -719,7 +544,7 @@ contract TreasureMarketplace is AccessControlEnumerableUpgradeable, PausableUpgr
         address _from,
         address _to,
         address _paymentTokenAddress,
-        bool _usingEth
+        bool _usingMagic
     ) private {
         IERC20 _paymentToken = IERC20(_paymentTokenAddress);
 
@@ -742,23 +567,23 @@ contract TreasureMarketplace is AccessControlEnumerableUpgradeable, PausableUpgr
         uint256 _protocolFeeAmount = _totalPrice * _protocolFee / BASIS_POINTS;
         uint256 _collectionFeeAmount = _totalPrice * _collectionFee / BASIS_POINTS;
 
-        _transferAmount(_from, feeReceipient, _protocolFeeAmount, _paymentToken, _usingEth);
-        _transferAmount(_from, _collectionFeeRecipient, _collectionFeeAmount, _paymentToken, _usingEth);
+        _transferAmount(_from, feeRecipient, _protocolFeeAmount, _paymentToken, _usingMagic);
+        _transferAmount(_from, _collectionFeeRecipient, _collectionFeeAmount, _paymentToken, _usingMagic);
 
         // Transfer rest to seller
-        _transferAmount(_from, _to, _totalPrice - _protocolFeeAmount - _collectionFeeAmount, _paymentToken, _usingEth);
+        _transferAmount(_from, _to, _totalPrice - _protocolFeeAmount - _collectionFeeAmount, _paymentToken, _usingMagic);
     }
 
-    function _transferAmount(address _from, address _to, uint256 _amount, IERC20 _paymentToken, bool _usingEth)
+    function _transferAmount(address _from, address _to, uint256 _amount, IERC20 _paymentToken, bool _usingMagic)
         private
     {
         if (_amount == 0) {
             return;
         }
 
-        if (_usingEth) {
+        if (_usingMagic) {
             (bool _success,) = payable(_to).call{value: _amount}("");
-            require(_success, "TreasureMarketplace: Sending eth was not successful");
+            require(_success, "TreasureMarketplace: Sending magic was not successful");
         } else {
             _paymentToken.safeTransferFrom(_from, _to, _amount);
         }
@@ -820,7 +645,7 @@ contract TreasureMarketplace is AccessControlEnumerableUpgradeable, PausableUpgr
     /// @param  _newFeeRecipient the wallet to receive fees
     function setFeeRecipient(address _newFeeRecipient) public onlyRole(TREASURE_MARKETPLACE_ADMIN_ROLE) {
         require(_newFeeRecipient != address(0), "TreasureMarketplace: cannot set 0x0 address");
-        feeReceipient = _newFeeRecipient;
+        feeRecipient = _newFeeRecipient;
         emit UpdateFeeRecipient(_newFeeRecipient);
     }
 
@@ -841,7 +666,7 @@ contract TreasureMarketplace is AccessControlEnumerableUpgradeable, PausableUpgr
         }
 
         require(
-            _paymentToken != address(0) && (_paymentToken == address(weth) || _paymentToken == address(paymentToken)),
+            _paymentToken != address(0) && (_paymentToken == address(wMagic) || _paymentToken == address(paymentToken)),
             "TreasureMarketplace: Payment token not supported"
         );
 
@@ -849,12 +674,6 @@ contract TreasureMarketplace is AccessControlEnumerableUpgradeable, PausableUpgr
 
         collectionToPaymentToken[_nft] = _paymentToken;
         emit TokenApprovalStatusUpdated(_nft, _status, _paymentToken);
-    }
-
-    function setWeth(address _wethAddress) external onlyRole(TREASURE_MARKETPLACE_ADMIN_ROLE) {
-        require(address(weth) == address(0), "WETH address already set");
-
-        weth = IERC20(_wethAddress);
     }
 
     /// @notice Updates the fee recipient which receives fees during sales
@@ -887,23 +706,11 @@ contract TreasureMarketplace is AccessControlEnumerableUpgradeable, PausableUpgr
 
         _;
     }
-}
 
-struct BuyItemParams {
-    /// which token contract holds the offered token
-    address nftAddress;
-    /// the identifier for the token to be bought
-    uint256 tokenId;
-    /// current owner of the item(s) to be bought
-    address owner;
-    /// how many of this token identifier to be bought (or 1 for a ERC-721 token)
-    uint64 quantity;
-    /// the maximum price (in units of the paymentToken) for each token offered
-    uint128 maxPricePerItem;
-    /// the payment token to be used
-    address paymentToken;
-    /// indicates if the user is purchasing this item with eth.
-    bool usingEth;
+    /// @dev Function that should revert when `msg.sender` is not authorized to upgrade the contract. Called by
+    ///      {upgradeTo} and {upgradeToAndCall}.
+    /// @param newImplementation address of the new implementation
+    function _authorizeUpgrade(address newImplementation) internal override onlyRole(TREASURE_MARKETPLACE_ADMIN_ROLE) {}
 }
 
 struct AcceptBidParams {
@@ -919,15 +726,4 @@ struct AcceptBidParams {
     uint128 pricePerItem;
     /// the payment token to be used
     address paymentToken;
-}
-
-struct CancelBidParams {
-    BidType bidType;
-    address nftAddress;
-    uint256 tokenId;
-}
-
-enum BidType {
-    TOKEN,
-    COLLECTION
 }
