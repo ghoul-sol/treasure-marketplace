@@ -1,12 +1,14 @@
 [profile.default]
 src = "contracts"
 out = "artifacts"
+test = "forge-test"
 libs = ["node_modules", "lib"]
 remappings = [
     "@openzeppelin/=node_modules/@openzeppelin/",
     "@prb/=node_modules/@prb/",
     "hardhat-deploy/=node_modules/hardhat-deploy/",
     "hardhat/=node_modules/hardhat/",
+    "forge-std/=lib/forge-std/src/",
 ]
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
