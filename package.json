@@ -11,8 +11,7 @@
         "deploy:zksync-sepolia": "hardhat deploy-zksync --network zkSyncSepolia --script deploy.ts",
         "deploy:treasure-topaz": "hardhat deploy-zksync --network treasureTopaz --script deploy.ts",
         "deploy:treasure-mainnet": "hardhat deploy-zksync --network treasureMainnet --script deploy.ts",
-        "hardhat:test": "hardhat test",
-        "test": "hardhat coverage --testfiles 'contracts/TreasureMarketplace.sol'"
+        "test:forge": "forge test --zksync"
     },
     "repository": {
         "type": "git",
